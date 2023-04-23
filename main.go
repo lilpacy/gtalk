@@ -20,12 +20,12 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	fmt.Println("Chat with GPT-3:")
+	gpt := gpt.NewGPT(accessToken)
 	for {
 		fmt.Print("You: ")
 		scanner.Scan()
 		input := scanner.Text()
 
-		gpt := gpt.NewGPT(accessToken)
 		textChan, err := gpt.GenerateResponse(input)
 		if err != nil {
 			fmt.Println("Error:", err)
@@ -40,5 +40,9 @@ func main() {
 			os.Stdout.Sync()
 		}
 		fmt.Println()
+		gpt.Messages = append(gpt.Messages, map[string]string{
+			"role":    "assistant",
+			"content": buffer.String(),
+		})
 	}
 }

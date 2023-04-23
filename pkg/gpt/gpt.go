@@ -19,18 +19,19 @@ func NewGPT(accessToken string) *GPT {
 
 type GPT struct {
 	accessToken string
+	Messages    []map[string]string
 }
 
 func (g *GPT) GenerateResponse(prompt string) (<-chan string, error) {
+	g.Messages = append(g.Messages, map[string]string{
+		"role":    "user",
+		"content": prompt,
+	})
+
 	requestBody := map[string]interface{}{
-		"model": "gpt-3.5-turbo",
-		"messages": []map[string]interface{}{
-			{
-				"role":    "user",
-				"content": prompt,
-			},
-		},
-		"stream": true,
+		"model":    "gpt-3.5-turbo",
+		"messages": g.Messages,
+		"stream":   true,
 	}
 
 	requestBytes, err := json.Marshal(requestBody)
