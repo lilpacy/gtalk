@@ -7,6 +7,7 @@ import (
 	"gtalk/pkg/gpt"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -25,12 +26,19 @@ func main() {
 		input := scanner.Text()
 
 		gpt := gpt.NewGPT(accessToken)
-		response, err := gpt.GenerateResponse(input)
+		textChan, err := gpt.GenerateResponse(input)
 		if err != nil {
 			fmt.Println("Error:", err)
 			continue
 		}
 
-		fmt.Println("GPT-3:", response)
+		fmt.Print("GPT-3: ")
+		var buffer strings.Builder
+		for text := range textChan {
+			buffer.WriteString(text)
+			fmt.Print(text)
+			os.Stdout.Sync()
+		}
+		fmt.Println()
 	}
 }

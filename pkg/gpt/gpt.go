@@ -1,10 +1,12 @@
 package gpt
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"strings"
 )
 
 const apiEndpoint = "https://api.openai.com/v1/chat/completions"
@@ -19,7 +21,7 @@ type GPT struct {
 	accessToken string
 }
 
-func (g *GPT) GenerateResponse(prompt string) (string, error) {
+func (g *GPT) GenerateResponse(prompt string) (<-chan string, error) {
 	requestBody := map[string]interface{}{
 		"model": "gpt-3.5-turbo",
 		"messages": []map[string]interface{}{
@@ -28,20 +30,19 @@ func (g *GPT) GenerateResponse(prompt string) (string, error) {
 				"content": prompt,
 			},
 		},
-		"max_tokens":  200,
-		"temperature": 0.7,
+		"stream": true,
 	}
 
 	requestBytes, err := json.Marshal(requestBody)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	requestReader := bytes.NewReader(requestBytes)
 
 	request, err := http.NewRequest(http.MethodPost, apiEndpoint, requestReader)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	request.Header.Set("Content-Type", "application/json")
@@ -51,25 +52,44 @@ func (g *GPT) GenerateResponse(prompt string) (string, error) {
 
 	response, err := client.Do(request)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	defer response.Body.Close()
+	textChan := make(chan string)
+	go func() {
+		defer response.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return "", err
-	}
+		reader := bufio.NewReader(response.Body)
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				if err == io.EOF {
+					close(textChan)
+				}
+				break
+			}
 
-	var responseMap map[string]interface{}
-	if err := json.Unmarshal(responseBody, &responseMap); err != nil {
-		return "", err
-	}
-
-	choices := responseMap["choices"].([]interface{})
-	choice := choices[0].(map[string]interface{})
-	message := choice["message"].(map[string]interface{})
-	text := message["content"].(string)
-
-	return text, nil
+			if strings.HasPrefix(line, "data:") {
+				data := strings.TrimSpace(line[5:])
+				if data == "[DONE]" {
+					close(textChan)
+					break
+				} else {
+					var responseMap map[string]interface{}
+					if err := json.Unmarshal([]byte(data), &responseMap); err != nil {
+						continue
+					}
+					if choices, ok := responseMap["choices"].([]interface{}); ok {
+						choice := choices[0].(map[string]interface{})
+						if delta, ok := choice["delta"].(map[string]interface{}); ok {
+							if content, ok := delta["content"].(string); ok {
+								textChan <- content
+							}
+						}
+					}
+				}
+			}
+		}
+	}()
+	return textChan, nil
 }
