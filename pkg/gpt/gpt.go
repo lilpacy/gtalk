@@ -3,26 +3,32 @@ package gpt
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/joho/godotenv"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
 )
 
-const apiEndpoint = "https://api.openai.com/v1/engines/text-davinci-003/completions"
+const apiEndpoint = "https://api.openai.com/v1/chat/completions"
 
-func GenerateResponse(prompt string) (string, error) {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
+func NewGPT(accessToken string) *GPT {
+	return &GPT{
+		accessToken: accessToken,
 	}
+}
 
-	accessToken := os.Getenv("API_KEY")
+type GPT struct {
+	accessToken string
+}
 
+func (g *GPT) GenerateResponse(prompt string) (string, error) {
 	requestBody := map[string]interface{}{
-		"prompt":      prompt,
-		"max_tokens":  50,
+		"model": "gpt-3.5-turbo",
+		"messages": []map[string]interface{}{
+			{
+				"role":    "user",
+				"content": prompt,
+			},
+		},
+		"max_tokens":  200,
 		"temperature": 0.7,
 	}
 
@@ -39,7 +45,7 @@ func GenerateResponse(prompt string) (string, error) {
 	}
 
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Authorization", "Bearer "+accessToken)
+	request.Header.Set("Authorization", "Bearer "+g.accessToken)
 
 	client := &http.Client{}
 
@@ -62,7 +68,8 @@ func GenerateResponse(prompt string) (string, error) {
 
 	choices := responseMap["choices"].([]interface{})
 	choice := choices[0].(map[string]interface{})
-	text := choice["text"].(string)
+	message := choice["message"].(map[string]interface{})
+	text := message["content"].(string)
 
 	return text, nil
 }
