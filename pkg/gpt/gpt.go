@@ -29,9 +29,10 @@ func (g *GPT) GenerateResponse(prompt string) (<-chan string, error) {
 	})
 
 	requestBody := map[string]interface{}{
-		"model":    "gpt-3.5-turbo",
-		"messages": g.Messages,
-		"stream":   true,
+		"model":       "gpt-3.5-turbo",
+		"messages":    g.Messages,
+		"temperature": 1.0,
+		"stream":      true,
 	}
 
 	requestBytes, err := json.Marshal(requestBody)

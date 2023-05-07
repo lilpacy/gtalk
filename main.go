@@ -3,19 +3,17 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/joho/godotenv"
 	"gtalk/pkg/gpt"
-	"log"
 	"os"
 	"strings"
 )
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	accessToken := os.Getenv("OPENAI_API_KEY")
+	if accessToken == "" {
+		fmt.Println("Error: OPENAI_API_KEY is not set")
+		os.Exit(1)
 	}
-	accessToken := os.Getenv("API_KEY")
 
 	scanner := bufio.NewScanner(os.Stdin)
 
