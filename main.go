@@ -17,7 +17,7 @@ func main() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 
-	fmt.Println("Chat with GPT-3:")
+	fmt.Println("Chat with GPT:")
 	gpt := gpt.NewGPT(accessToken)
 	for {
 		fmt.Print("You: ")
@@ -30,7 +30,7 @@ func main() {
 			continue
 		}
 
-		fmt.Print("GPT-3: ")
+		fmt.Print("GPT: ")
 		var buffer strings.Builder
 		for text := range textChan {
 			buffer.WriteString(text)
